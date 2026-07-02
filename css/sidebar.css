@@ -1,0 +1,279 @@
+/* =============================================================
+   SIDEBAR LAYOUT SYSTEM
+   Two-column shell: fixed-width sidebar left, scrollable content right.
+   The sidebar persists across every route change.
+   ============================================================= */
+
+/* ── App shell layout ─────────────────────────────────────── */
+.app-layout{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  min-height:calc(100vh - 96px); /* below the header */
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:0 24px;
+  gap:24px;
+  align-items:start;
+}
+@media (max-width:1100px){ .app-layout{grid-template-columns:260px 1fr; gap:18px;} }
+@media (max-width:860px){  .app-layout{grid-template-columns:1fr;} }
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.sidebar{
+  position:sticky;
+  top:calc(96px + 20px); /* below sticky header */
+  max-height:calc(100vh - 120px);
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:28px 22px 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  scrollbar-width:thin;
+  scrollbar-color:var(--line-strong) transparent;
+}
+/* hide sidebar entirely on mobile (top nav handles navigation) */
+@media (max-width:860px){ .sidebar{display:none;} }
+
+/* ── Photo ────────────────────────────────────────────────── */
+.sb-photo-wrap{
+  position:relative;
+  width:110px;
+  height:110px;
+  margin-bottom:18px;
+  flex-shrink:0;
+}
+.sb-photo{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:50%;
+  border:3px solid var(--paper-raised);
+  box-shadow:var(--shadow-md);
+  display:block;
+}
+.sb-available-dot{
+  position:absolute;
+  bottom:6px;
+  right:6px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:var(--good);
+  border:2px solid var(--paper-raised);
+  box-shadow:0 0 0 3px rgba(46,125,91,0.18);
+}
+
+/* ── Identity ─────────────────────────────────────────────── */
+.sb-name{
+  font-family:var(--display);
+  font-size:19px;
+  font-weight:600;
+  color:var(--ink);
+  margin:0 0 6px;
+  letter-spacing:-0.01em;
+  line-height:1.2;
+}
+.sb-title{
+  font-family:var(--mono);
+  font-size:10.5px;
+  color:var(--ochre-text);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  font-weight:600;
+  margin:0 0 3px;
+  line-height:1.4;
+}
+.sb-location{
+  font-size:13px;
+  color:var(--ink-faint);
+  margin:10px 0 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+}
+.sb-location-icon{ font-size:12px; }
+
+/* ── Stat pills ───────────────────────────────────────────── */
+.sb-stats{
+  display:flex;
+  gap:10px;
+  margin:18px 0 0;
+  width:100%;
+}
+.sb-stat{
+  flex:1;
+  background:var(--line);
+  border-radius:var(--r-md);
+  padding:10px 4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+}
+.sb-stat-num{
+  font-family:var(--display);
+  font-size:20px;
+  font-weight:600;
+  color:var(--teal);
+  line-height:1;
+}
+.sb-stat-label{
+  font-family:var(--mono);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--ink-faint);
+}
+
+/* ── Divider ──────────────────────────────────────────────── */
+.sb-divider{
+  border:none;
+  border-top:1px solid var(--line);
+  width:100%;
+  margin:18px 0;
+}
+
+/* ── Sidebar nav links ────────────────────────────────────── */
+.sb-nav{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  width:100%;
+}
+.sb-link{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:var(--r-md);
+  text-decoration:none;
+  font-size:13.5px;
+  font-weight:500;
+  color:var(--ink-soft);
+  transition:background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  text-align:left;
+}
+.sb-link:hover{
+  background:var(--line);
+  color:var(--ink);
+  transform:translateX(2px);
+}
+.sb-link.active{
+  background:rgba(14,21,37,0.07);
+  color:var(--ink);
+  font-weight:600;
+}
+html[data-theme="dark"] .sb-link.active{
+  background:rgba(243,241,234,0.07);
+}
+.sb-link-icon{
+  font-size:10px;
+  color:var(--ochre);
+  flex-shrink:0;
+  transition:color var(--t-fast);
+}
+.sb-link.active .sb-link-icon{
+  color:var(--ochre);
+}
+
+/* ── Social icons ─────────────────────────────────────────── */
+.sb-socials{
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  width:100%;
+}
+.sb-social{
+  width:36px;
+  height:36px;
+  border-radius:var(--r-md);
+  border:1px solid var(--line-strong);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  color:var(--ink-soft);
+  transition:background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast);
+}
+.sb-social svg{
+  width:16px;
+  height:16px;
+  fill:currentColor;
+}
+.sb-social:hover{
+  background:var(--teal-solid);
+  border-color:var(--teal-solid);
+  color:#fff;
+  transform:translateY(-2px);
+}
+
+/* ── CV button ────────────────────────────────────────────── */
+.sb-cv-btn{
+  width:100%;
+  justify-content:center;
+  font-size:13px;
+  padding:11px 16px;
+  margin-top:16px;
+}
+
+/* ── Main content area ────────────────────────────────────── */
+.app-main{
+  min-height:60vh;
+  padding-bottom:var(--sp-9);
+}
+
+/* Collapse the full-width hero hero-grid to a single column
+   since it no longer has the whole page width to itself */
+.app-main .hero-grid{
+  grid-template-columns:1fr !important;
+  gap:32px;
+}
+.app-main .hero .wrap{ padding:0; }
+.app-main .dash-card{ max-width:480px; }
+
+/* Remove the wrap left/right padding on route sections since
+   the app-layout already provides lateral spacing */
+.app-main section > .wrap,
+.app-main .stats-strip > .wrap{
+  padding-left:0;
+  padding-right:0;
+  max-width:100%;
+}
+
+/* Tighten section vertical padding inside the sidebar layout */
+.app-main section{ padding:56px 0; }
+.app-main .stats-strip{ padding:40px 0; }
+@media (max-width:760px){
+  .app-main section{ padding:40px 0; }
+}
+
+/* About grid — 3 cols is too wide inside a narrower content area,
+   collapse to 2 cols (photo + body/timeline stacked) */
+.app-main .about-grid-photo{
+  grid-template-columns:0.55fr 1fr !important;
+}
+@media (max-width:1100px){
+  .app-main .about-grid-photo{
+    grid-template-columns:1fr !important;
+  }
+  .app-main .about-grid-photo > div:last-child{
+    grid-column:1/-1;
+  }
+}
+
+/* Insights / showcase grids — 2 cols is fine at this width */
+.app-main .insights-grid,
+.app-main .sw-grid{
+  /* already defined as 1fr grids — let them flow naturally */
+}
+
+/* On desktop with sidebar visible, hide the hero section from the About route
+   — the sidebar already shows photo, name, title, CTA, and social links.
+   On mobile (<860px) the sidebar is hidden so the hero shows normally. */
+@media (min-width:861px){
+  .app-main .hero{ display:none; }
+  .app-main .stats-strip{ display:none; }
+}

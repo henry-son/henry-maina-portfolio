@@ -1,0 +1,43 @@
+/* ---------- Router-specific styles ---------- */
+
+/* Active nav link indicator — top nav */
+.navlinks a.active{color:var(--ink); font-weight:600;}
+.navlinks a.active::after{
+  content:''; position:absolute; left:0; right:0; bottom:-8px; height:2px; background:var(--ochre); border-radius:2px;
+}
+.navlinks a{position:relative; padding-bottom:2px;}
+.mobile-menu a.active{color:var(--ochre); font-weight:600;}
+
+/* Active nav link indicator — sidebar nav (handled via .sb-link.active in sidebar.css) */
+
+/* Route content fade transition */
+#app{min-height:60vh;}
+.route-content{
+  animation:routeFadeIn var(--t-base) ease;
+}
+@keyframes routeFadeIn{
+  from{opacity:0; transform:translateY(8px);}
+  to{opacity:1; transform:translateY(0);}
+}
+@media (prefers-reduced-motion: reduce){
+  .route-content{animation:none;}
+}
+
+/* Loading spinner shown briefly while a route partial fetches */
+.route-loading{
+  display:flex; align-items:center; justify-content:center; min-height:50vh;
+}
+.route-loading-spinner{
+  width:28px; height:28px; border-radius:50%;
+  border:3px solid var(--line-strong); border-top-color:var(--ochre);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.route-loading.hidden{display:none;}
+
+/* 404 / route not found */
+.route-404{
+  padding:var(--sp-11) var(--sp-5); text-align:center;
+}
+.route-404 h2{font-family:var(--display); font-size:2rem; margin-bottom:var(--sp-3);}
+.route-404 p{color:var(--ink-soft); margin-bottom:var(--sp-6);}
