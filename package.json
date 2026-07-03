@@ -1,0 +1,12 @@
+{
+  "name": "henry-maina-portfolio",
+  "version": "1.0.0",
+  "description": "Henry Maina Portfolio — frontend + backend",
+  "scripts": {
+    "start": "cd server && node index.js",
+    "install-server": "cd server && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
