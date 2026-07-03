@@ -28,15 +28,19 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:8000')
 
 // ─── Nodemailer transporter (Gmail SMTP) ─────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: { user: SMTP_USER, pass: SMTP_PASS },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
-// Verify connection on startup — catches bad credentials early.
+// Verify connection on startup — logs result but never crashes the server.
 transporter.verify((err) => {
   if (err) {
-    console.error('[mailer] SMTP connection failed:', err.message);
-    console.error('[mailer] Check SMTP_USER and SMTP_PASS in server/.env');
+    console.warn('[mailer] SMTP verify failed (will retry on first send):', err.message);
   } else {
     console.log(`[mailer] SMTP ready — sending as ${SMTP_USER}`);
   }
@@ -221,7 +225,7 @@ app.post(
       text: [
         `Dear ${name},`,
         ``,
-        `Thank you for reaching out. Your message has been received and I will get back to you as soon as possible — typically within the shortest-time possible.`,
+        `Thank you for reaching out. Your message has been received and I will get back to you as soon as possible — typically within 24 to 48 hours.`,
         ``,
         `For your reference, here is a copy of your message:`,
         `─────────────────────────────────`,

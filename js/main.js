@@ -7,6 +7,15 @@
  */
 
 /* ============================================================
+   GLOBAL HELPERS — must be declared before any IIFE or handler
+   ============================================================ */
+
+function resumeClick(e) {
+  e.preventDefault();
+  alert('Add your CV PDF link here — replace the href on the Download CV buttons once you have a file to link to.');
+}
+
+/* ============================================================
    SITE-WIDE CHROME — runs once, persists across route changes
    ============================================================ */
 
@@ -52,6 +61,11 @@
   window.closeMobileMenu = close;
 })();
 
+/* ---------- Resume button placeholder (header + mobile; hero button is per-route) ---------- */
+['resumeBtnTop', 'resumeBtnMobile', 'resumeBtnSidebar'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', resumeClick);
+});
 
 /* ============================================================
    ROUTE-SCOPED FEATURES — re-bound on every route:loaded event
@@ -278,7 +292,7 @@ function initContactForm(scope) {
         <h3 class="form-success-title">Thank you, ${name}.</h3>
         <p class="form-success-body">
           Your message has been received and is in good hands.<br>
-          A confirmation has been sent to your email — I'll be in touch within <strong>the shortest–time possible</strong>.
+          A confirmation has been sent to your email — I'll be in touch within <strong>24–48 hours</strong>.
         </p>
         <div class="form-success-divider"></div>
         <p class="form-success-sub">In the meantime, feel free to explore more of my work.</p>
