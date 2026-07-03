@@ -1,10 +1,10 @@
 {
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "cd server && npm install"
+    "builder": "RAILPACK",
+    "buildCommand": "npm install"
   },
   "deploy": {
-    "startCommand": "cd server && node index.js",
+    "startCommand": "node index.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
