@@ -12,6 +12,11 @@ const nodemailer  = require('nodemailer');
 const { body, validationResult } = require('express-validator');
 
 // ─── Env validation ───────────────────────────────────────────────────────────
+// Debug: show what environment variables are actually present
+console.log('[debug] SMTP_USER present:', !!process.env.SMTP_USER);
+console.log('[debug] SMTP_PASS present:', !!process.env.SMTP_PASS, 'length:', (process.env.SMTP_PASS || '').length);
+console.log('[debug] CONTACT_TO present:', !!process.env.CONTACT_TO);
+
 const REQUIRED_ENV = ['SMTP_USER', 'SMTP_PASS', 'CONTACT_TO'];
 const missing = REQUIRED_ENV.filter((k) => !process.env[k] || process.env[k].trim() === '');
 if (missing.length) {
