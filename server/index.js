@@ -1,6 +1,9 @@
 'use strict';
 
-require('dotenv').config();
+// Load .env file if it exists (local dev only).
+// On Render/Railway, variables are already in process.env — dotenv does nothing.
+try { require('dotenv').config(); } catch (_) {}
+
 const express     = require('express');
 const cors        = require('cors');
 const helmet      = require('helmet');
@@ -10,10 +13,11 @@ const { body, validationResult } = require('express-validator');
 
 // ─── Env validation ───────────────────────────────────────────────────────────
 const REQUIRED_ENV = ['SMTP_USER', 'SMTP_PASS', 'CONTACT_TO'];
-const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
+const missing = REQUIRED_ENV.filter((k) => !process.env[k] || process.env[k].trim() === '');
 if (missing.length) {
   console.error(`[startup] Missing required env vars: ${missing.join(', ')}`);
-  console.error('[startup] Copy server/.env.example to server/.env and fill in the values.');
+  console.error('[startup] On Render: add them in the Environment tab.');
+  console.error('[startup] Locally: copy server/.env.example to server/.env');
   process.exit(1);
 }
 
@@ -21,12 +25,12 @@ const PORT            = parseInt(process.env.PORT || '3001', 10);
 const CONTACT_TO      = process.env.CONTACT_TO;
 const SMTP_USER       = process.env.SMTP_USER;
 const SMTP_PASS       = process.env.SMTP_PASS;
-const REPLY_TO_SENDER = process.env.REPLY_TO_SENDER !== 'false'; // default true
+const REPLY_TO_SENDER = process.env.REPLY_TO_SENDER !== 'false';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:8000')
   .split(',')
   .map((o) => o.trim());
 
-// ─── Nodemailer transporter (Gmail SMTP) ─────────────────────────────────────
+// ─── Nodemailer transporter ───────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
@@ -37,7 +41,6 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 10000,
 });
 
-// Verify connection on startup — logs result but never crashes the server.
 transporter.verify((err) => {
   if (err) {
     console.warn('[mailer] SMTP verify failed (will retry on first send):', err.message);
@@ -49,14 +52,11 @@ transporter.verify((err) => {
 // ─── Express app ─────────────────────────────────────────────────────────────
 const app = express();
 
-// Security headers
 app.use(helmet());
 
-// CORS — only allow requests from the configured frontend origin(s)
 app.use(
   cors({
     origin: (origin, cb) => {
-      // Allow requests with no origin (curl, Postman, server-side) in dev
       if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
       cb(new Error(`CORS: origin "${origin}" not allowed`));
     },
@@ -65,11 +65,9 @@ app.use(
   })
 );
 
-// Body parsing — max 50kb, enough for a contact message, blocks payload attacks
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: false, limit: '50kb' }));
 
-// Rate limiting — max 5 contact submissions per IP per 15 minutes
 const contactLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -83,17 +81,14 @@ const contactLimiter = rateLimit({
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
-// Health check — confirms the server is running
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, timestamp: new Date().toISOString() });
 });
 
-// Contact form submission
 app.post(
   '/api/contact',
   contactLimiter,
 
-  // Input validation rules
   body('name')
     .trim()
     .notEmpty().withMessage('Name is required.')
@@ -117,7 +112,6 @@ app.post(
     .withMessage('Message must be between 10 and 5000 characters.'),
 
   async (req, res) => {
-    // Return validation errors as a structured response the frontend can use
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(422).json({
@@ -130,7 +124,11 @@ app.post(
     }
 
     const { name, email, subject, message } = req.body;
-    const timestamp  = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short' });
+    const timestamp = new Date().toLocaleString('en-KE', {
+      timeZone: 'Africa/Nairobi',
+      dateStyle: 'full',
+      timeStyle: 'short',
+    });
     const subjectLine = subject
       ? `[Portfolio] ${subject}`
       : `[Portfolio] New message from ${name}`;
@@ -161,8 +159,6 @@ app.post(
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:24px 0;background:#f0ede6;font-family:Inter,Helvetica,Arial,sans-serif">
   <div style="max-width:580px;margin:0 auto">
-
-    <!-- Header -->
     <div style="background:#0E1525;border-radius:12px 12px 0 0;padding:28px 32px 24px">
       <p style="margin:0 0 6px;font-family:monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#B8924A">
         Henry Maina · Portfolio
@@ -172,8 +168,6 @@ app.post(
       </h1>
       <p style="margin:8px 0 0;font-size:13px;color:#8891A3">${timestamp}</p>
     </div>
-
-    <!-- Sender meta -->
     <div style="background:#fff;border-left:1px solid #dedad2;border-right:1px solid #dedad2;padding:22px 32px 0">
       <table style="width:100%;border-collapse:collapse">
         <tr>
@@ -189,17 +183,13 @@ app.post(
         </tr>` : ''}
       </table>
     </div>
-
-    <!-- Message body -->
     <div style="background:#fff;border-left:1px solid #dedad2;border-right:1px solid #dedad2;padding:24px 32px">
       <p style="margin:0 0 12px;font-size:12px;color:#69728A;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Message</p>
       <div style="background:#f7f5f0;border-left:3px solid #B8924A;border-radius:0 8px 8px 0;padding:18px 20px;font-size:15px;line-height:1.75;color:#0E1525;white-space:pre-wrap">${escapeHtml(message)}</div>
     </div>
-
-    <!-- Reply CTA -->
     <div style="background:#fff;border:1px solid #dedad2;border-top:none;border-radius:0 0 12px 12px;padding:20px 32px 26px">
       <a href="mailto:${escapeHtml(email)}?subject=Re: ${escapeHtml(subjectLine)}"
-         style="display:inline-block;background:#0E1525;color:#FCFBF8;text-decoration:none;font-size:13px;font-weight:600;padding:12px 24px;border-radius:8px;letter-spacing:0.01em">
+         style="display:inline-block;background:#0E1525;color:#FCFBF8;text-decoration:none;font-size:13px;font-weight:600;padding:12px 24px;border-radius:8px">
         Reply to ${escapeHtml(name)} →
       </a>
       <p style="margin:16px 0 0;font-size:12px;color:#8891A3">
@@ -207,8 +197,6 @@ app.post(
         Sent via your portfolio contact form.
       </p>
     </div>
-
-    <!-- Footer -->
     <p style="text-align:center;margin:18px 0 0;font-size:11px;color:#9CA3AF">
       Henry Maina Portfolio &nbsp;·&nbsp; mwangihenry622@gmail.com
     </p>
@@ -247,15 +235,12 @@ app.post(
         ``,
         `─────────────────────────────────`,
         `This is an automated confirmation. Please do not reply to this email directly.`,
-        `To contact Henry, visit: https://hmanalytics.netlify.app`,
       ].join('\n'),
       html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:32px 0;background:#f0ede6;font-family:Inter,Helvetica,Arial,sans-serif">
   <div style="max-width:580px;margin:0 auto">
-
-    <!-- Header bar -->
     <div style="background:#0E1525;border-radius:12px 12px 0 0;padding:32px 36px">
       <p style="margin:0 0 8px;font-family:monospace;font-size:11px;letter-spacing:0.09em;text-transform:uppercase;color:#B8924A;font-weight:600">
         Henry Maina · Official Response
@@ -267,18 +252,12 @@ app.post(
         This confirmation was sent automatically — ${timestamp}
       </p>
     </div>
-
-    <!-- Green confirmation strip -->
-    <div style="background:#1a3d2b;padding:14px 36px;display:flex;align-items:center;gap:12px">
-      <span style="font-size:18px">✅</span>
-      <p style="margin:0;font-size:13.5px;color:#a3e0bc;font-weight:600;letter-spacing:0.01em">
-        Your message has been received and is in good hands.
+    <div style="background:#1a3d2b;padding:14px 36px">
+      <p style="margin:0;font-size:13.5px;color:#a3e0bc;font-weight:600">
+        ✅ Your message has been received and is in good hands.
       </p>
     </div>
-
-    <!-- Body -->
     <div style="background:#ffffff;border:1px solid #dedad2;border-top:none;padding:32px 36px">
-
       <p style="margin:0 0 20px;font-size:15.5px;line-height:1.8;color:#0E1525">
         Dear <strong>${escapeHtml(name)}</strong>,
       </p>
@@ -286,47 +265,27 @@ app.post(
         I appreciate you taking the time to reach out. Your message has been successfully received
         and I will respond personally within <strong style="color:#0E1525">24 to 48 hours</strong>.
       </p>
-      <p style="margin:0 0 28px;font-size:15px;line-height:1.8;color:#2C3A4A">
-        For reference, here is a copy of what you sent:
-      </p>
-
-      <!-- Message copy block -->
       <div style="background:#f7f5f0;border-left:4px solid #B8924A;border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:32px">
-        ${subject ? `
-        <p style="margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#8891A3;font-weight:700">
-          Subject: ${escapeHtml(subject)}
-        </p>` : ''}
+        ${subject ? `<p style="margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#8891A3;font-weight:700">Subject: ${escapeHtml(subject)}</p>` : ''}
         <p style="margin:0;font-size:14.5px;line-height:1.75;color:#0E1525;white-space:pre-wrap">${escapeHtml(message)}</p>
       </div>
-
-      <!-- Divider with label -->
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
-        <div style="flex:1;height:1px;background:#e8e5de"></div>
-        <p style="margin:0;font-size:11px;color:#B8924A;text-transform:uppercase;letter-spacing:0.07em;font-weight:600;white-space:nowrap">Explore My Work</p>
-        <div style="flex:1;height:1px;background:#e8e5de"></div>
-      </div>
-
-      <!-- CTA buttons -->
       <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
         <tr>
           <td style="padding-right:8px;width:50%">
             <a href="https://hmanalytics.netlify.app"
-               style="display:block;background:#0E1525;color:#FCFBF8;text-decoration:none;font-size:13px;font-weight:700;padding:14px 18px;border-radius:8px;text-align:center;letter-spacing:0.01em">
+               style="display:block;background:#0E1525;color:#FCFBF8;text-decoration:none;font-size:13px;font-weight:700;padding:14px 18px;border-radius:8px;text-align:center">
               HM Analytics Agency →
             </a>
           </td>
           <td style="padding-left:8px;width:50%">
             <a href="https://elitetraderslimited.netlify.app"
-               style="display:block;background:#B8924A;color:#1A1300;text-decoration:none;font-size:13px;font-weight:700;padding:14px 18px;border-radius:8px;text-align:center;letter-spacing:0.01em">
+               style="display:block;background:#B8924A;color:#1A1300;text-decoration:none;font-size:13px;font-weight:700;padding:14px 18px;border-radius:8px;text-align:center">
               Elite Traders →
             </a>
           </td>
         </tr>
       </table>
-
       <hr style="border:none;border-top:1px solid #eeece6;margin:0 0 26px">
-
-      <!-- Signature -->
       <table style="border-collapse:collapse;width:100%">
         <tr>
           <td style="width:52px;padding-right:16px;vertical-align:top">
@@ -343,25 +302,19 @@ app.post(
         </tr>
       </table>
     </div>
-
-    <!-- Footer -->
     <div style="padding:18px 36px 0;text-align:center">
-      <p style="margin:0 0 6px;font-size:11px;color:#9CA3AF;line-height:1.6">
-        This is an automated confirmation email. Please do not reply to this message directly.
-      </p>
-      <p style="margin:0;font-size:11px;color:#9CA3AF">
+      <p style="margin:0;font-size:11px;color:#9CA3AF;line-height:1.6">
+        This is an automated confirmation. Please do not reply directly.<br>
         You received this because you submitted the contact form on
-        <a href="https://hmanalytics.netlify.app" style="color:#B8924A;text-decoration:none">Henry Maina's portfolio</a>.
+        <a href="https://henry-maina.netlify.app" style="color:#B8924A;text-decoration:none">Henry Maina's portfolio</a>.
       </p>
     </div>
-
   </div>
 </body>
 </html>`,
     };
 
     try {
-      /* Send both emails in parallel — neither blocks the other */
       await Promise.all([
         transporter.sendMail(notifyMail),
         transporter.sendMail(autoReplyMail),
@@ -378,14 +331,13 @@ app.post(
   }
 );
 
-// 404 catch-all for unknown API routes
 app.use('/api/*', (_req, res) => {
   res.status(404).json({ ok: false, error: 'Not found.' });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`[server] Running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[server] Running on http://0.0.0.0:${PORT}`);
   console.log(`[server] Delivering contact emails to: ${CONTACT_TO}`);
   console.log(`[server] Allowed origins: ${ALLOWED_ORIGINS.join(', ')}`);
 });
