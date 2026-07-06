@@ -38,12 +38,13 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:8000')
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
+  requireTLS: true,
   auth: { user: SMTP_USER, pass: SMTP_PASS },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
 });
 
 transporter.verify((err) => {
@@ -56,6 +57,9 @@ transporter.verify((err) => {
 
 // ─── Express app ─────────────────────────────────────────────────────────────
 const app = express();
+
+// Trust Render/Railway/Netlify proxy headers for accurate rate limiting
+app.set('trust proxy', 1);
 
 app.use(helmet());
 
