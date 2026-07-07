@@ -7,6 +7,7 @@ const cors       = require('cors');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 const { Resend } = require('resend');
+const https = require('https');
 const { body, validationResult } = require('express-validator');
 
 // ─── Env validation ───────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ app.post('/api/contact', contactLimiter,
   body('email').trim().notEmpty().isEmail().withMessage('Please enter a valid email address.').normalizeEmail(),
   body('subject').trim().optional({ checkFalsy: true }).isLength({ max: 200 }),
   body('message').trim().notEmpty().withMessage('Message is required.').isLength({ min: 10, max: 5000 }),
+body('cf-turnstile-response').notEmpty().withMessage('Please complete the security check.'),
 
   async (req, res) => {
     const errors = validationResult(req);
@@ -71,8 +73,14 @@ app.post('/api/contact', contactLimiter,
         errors: errors.array().reduce((acc, e) => { acc[e.path] = e.msg; return acc; }, {}),
       });
     }
+const { name, email, subject, message } = req.body;
+const turnstileToken = req.body['cf-turnstile-response'];
 
-    const { name, email, subject, message } = req.body;
+// Verify Turnstile token with Cloudflare
+const turnstileVerified = await verifyTurnstile(turnstileToken, req.ip);
+if (!turnstileVerified) {
+  return res.status(400).json({ ok: false, error: 'Security check failed. Please refresh and try again.' });
+}
     const timestamp = new Date().toLocaleString('en-KE', {
       timeZone: 'Africa/Nairobi', dateStyle: 'full', timeStyle: 'short',
     });
@@ -197,7 +205,43 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] Delivering contact emails to: ${CONTACT_TO}`);
   console.log(`[server] Allowed origins: ${ALLOWED_ORIGINS.join(', ')}`);
 });
+function verifyTurnstile(token, ip) {
+  return new Promise((resolve) => {
+    const params = new URLSearchParams({
+      secret: '0x4AAAAAADxND6lJ-BcYkBY7g574e_206jI',
+      response: token,
+      remoteip: ip || '',
+    }).toString();
 
+    const options = {
+      hostname: 'challenges.cloudflare.com',
+      path: '/turnstile/v0/siteverify',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(params),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          console.log('[turnstile] verify result:', json.success);
+          resolve(json.success === true);
+        } catch (_) { resolve(false); }
+      });
+    });
+    req.on('error', (err) => {
+      console.error('[turnstile] verify error:', err.message);
+      resolve(false);
+    });
+    req.write(params);
+    req.end();
+  });
+}
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

@@ -292,7 +292,7 @@ function initContactForm(scope) {
         <h3 class="form-success-title">Thank you, ${name}.</h3>
         <p class="form-success-body">
           Your message has been received and is in good hands.<br>
-          A confirmation has been sent to your email — I'll be in touch within <strong>24–48 hours</strong>.
+          A confirmation has been sent to your email — I'll be in touch within <strong>the shortest–time possible</strong>.
         </p>
         <div class="form-success-divider"></div>
         <p class="form-success-sub">In the meantime, feel free to explore more of my work.</p>
@@ -316,10 +316,14 @@ function initContactForm(scope) {
     clearErrors();
 
     const data = {};
-    fields.forEach((f) => {
-      const el = form.querySelector(`[name="${f}"]`);
-      if (el) data[f] = el.value.trim();
-    });
+fields.forEach((f) => {
+  const el = form.querySelector(`[name="${f}"]`);
+  if (el) data[f] = el.value.trim();
+});
+
+// Add Turnstile token
+const turnstileEl = form.querySelector('[name="cf-turnstile-response"]');
+data['cf-turnstile-response'] = turnstileEl ? turnstileEl.value : '';
 
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
