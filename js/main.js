@@ -248,11 +248,16 @@ function initInsightsFiltering(scope) {
       });
     });
   });
-}
-
+  
 function initContactForm(scope) {
   const form = scope.querySelector('#contactForm');
   if (!form) return;
+
+  // Re-render Turnstile widget after dynamic route injection
+  if (window.turnstile) {
+    window.turnstile.render('.cf-turnstile');
+  }
+}
 
   // Points to the Express server.
   // Override window.PORTFOLIO_API_URL before this script loads to change it.
